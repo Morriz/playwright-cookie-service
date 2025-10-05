@@ -1,0 +1,31 @@
+{
+  "configurations": [
+    {
+      "console": "integratedTerminal",
+      "name": "test",
+      "program": "${workspaceFolder}/test_playwright_service.py",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "request": "launch",
+      "type": "debugpy"
+    },
+    {
+      "args": [
+        "main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload"
+      ],
+      "cwd": "${workspaceFolder}/playwright-service",
+      "jinja": true,
+      "justMyCode": false,
+      "module": "uvicorn",
+      "name": "FastAPI",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "request": "launch",
+      "type": "debugpy"
+    }
+  ],
+  "version": "0.2.0"
+}
