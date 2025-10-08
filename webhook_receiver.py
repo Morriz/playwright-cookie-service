@@ -8,7 +8,7 @@ import asyncio
 from fastapi import FastAPI, Request
 from uvicorn import Config, Server
 
-from logger import setup_logger
+from lib.logger import setup_logger
 
 logger = setup_logger(__name__)
 
@@ -40,8 +40,6 @@ async def receive_webhook(request: Request):
         logger.error(f"Error: {payload.get('error')}")
 
     logger.info("=" * 80)
-
-    return {"status": "received"}
 
 
 async def main():

@@ -1,10 +1,10 @@
-from typing import Any
+from typing import Any, cast
 
 from anthropic import AsyncAnthropic
-from anthropic.types import Message, TextBlock, ToolUseBlock
+from anthropic.types import Message, MessageParam, TextBlock, ToolParam, ToolUseBlock
 from mcp import ClientSession
 
-from logger import setup_logger
+from lib.logger import setup_logger
 
 logger = setup_logger(__name__)
 
@@ -13,17 +13,16 @@ class ClaudePlaywrightAgent:
     """Claude agent that orchestrates browser automation via MCP tools."""
 
     def __init__(self, api_key: str):
-        logger.info("Initializing Claude agent")
+        logger.debug("Initializing Claude agent")
         self.client = AsyncAnthropic(api_key=api_key)
         self.model = "claude-sonnet-4-5"
-        self.conversation_history = []
-        logger.info(f"Using model: {self.model}")
+        self.conversation_history: list[MessageParam] = []
+        logger.debug(f"Using model: {self.model}")
 
     async def execute_task(
         self,
         task: str,
         mcp_session: ClientSession,
-        validator,
         max_iterations: int = 30,
     ) -> dict[str, Any]:
         """
@@ -35,16 +34,15 @@ class ClaudePlaywrightAgent:
         3. Execute tools via MCP session
         4. Send results back to Claude
         5. Repeat until Claude returns final answer
-        6. If validator provided, validate response and give Claude feedback to fix
         """
 
-        logger.info("Starting task execution")
+        logger.debug("Starting task execution")
         logger.debug(f"Task: {task[:200]}...")
 
         # Get available MCP tools and convert to Claude's tool format
         mcp_tools_response = await mcp_session.list_tools()
         tools = self._convert_mcp_tools_to_claude_format(mcp_tools_response.tools)
-        logger.info(f"Converted {len(tools)} MCP tools to Claude format")
+        logger.debug(f"Converted {len(tools)} MCP tools to Claude format")
 
         # Initialize conversation with user task
         self.conversation_history = [
@@ -65,15 +63,18 @@ class ClaudePlaywrightAgent:
                 model=self.model,
                 max_tokens=4096,
                 messages=self.conversation_history,
-                tools=tools,
+                tools=cast(list[ToolParam], tools),
+                thinking={"type": "enabled", "budget_tokens": 2000},
             )
 
             logger.info(f"Claude response - stop_reason: {response.stop_reason}")
 
-            # Log Claude's reasoning/text if present
-            text_content = self._extract_text_from_response(response)
-            if text_content:
-                logger.info(f"Claude reasoning: {text_content}")
+            # Log thinking and reasoning blocks
+            for block in response.content:
+                block_type = getattr(block, 'type', None)
+                if block_type in ("thinking", "text"):
+                    content = getattr(block, 'thinking', None) or getattr(block, 'text', str(block))
+                    logger.info(f"💭 Claude thinking: {content}")
 
             # Add assistant response to history
             self.conversation_history.append(
@@ -90,20 +91,15 @@ class ClaudePlaywrightAgent:
                 logger.info("Claude finished with final response")
                 logger.debug(f"Final text: {final_text[:200]}...")
 
-                # Validate output
-                is_valid, error_msg = validator(final_text)
-                if not is_valid:
-                    # Give Claude feedback to fix the output
-                    logger.warning(
-                        f"Validation failed: {error_msg}. Asking Claude to fix..."
-                    )
-                    self.conversation_history.append(
-                        {
-                            "role": "user",
-                            "content": f"ERROR: {error_msg}\n\nPlease fix your response and try again.",
-                        }
-                    )
-                    continue
+                # Check if Claude is reporting a failure using the protocol
+                if final_text.startswith("TASK_FAILED:"):
+                    error_message = final_text.replace("TASK_FAILED:", "").strip()
+                    logger.error(f"Claude reported task failure: {error_message}")
+                    return {
+                        "success": False,
+                        "error": error_message,
+                        "iterations": iteration,
+                    }
 
                 logger.info(f"Task completed successfully in {iteration} iterations")
                 return {
@@ -114,7 +110,7 @@ class ClaudePlaywrightAgent:
 
             # Process tool calls - execute ONE tool at a time for visibility
             if response.stop_reason == "tool_use":
-                logger.info("Claude requested tool calls")
+                logger.debug("Claude requested tool calls")
 
                 # Find first tool_use block
                 tool_use_block = None
@@ -133,7 +129,7 @@ class ClaudePlaywrightAgent:
                     try:
                         # Call MCP tool via session
                         result = await mcp_session.call_tool(
-                            tool_name, arguments=tool_input
+                            tool_name, arguments=cast(dict[str, Any], tool_input)
                         )
 
                         # Extract text content from MCP result
@@ -175,7 +171,7 @@ class ClaudePlaywrightAgent:
                                     {
                                         "type": "tool_result",
                                         "tool_use_id": tool_use_id,
-                                        "content": f"Error: {str(e)}",
+                                        "content": f"Error: {e!s}",
                                         "is_error": True,
                                     }
                                 ],
@@ -214,7 +210,7 @@ class ClaudePlaywrightAgent:
                 try:
                     # Call MCP tool via session
                     result = await mcp_session.call_tool(
-                        tool_name, arguments=tool_input
+                        tool_name, arguments=cast(dict[str, Any], tool_input)
                     )
 
                     # Extract text content from MCP result
@@ -238,8 +234,8 @@ class ClaudePlaywrightAgent:
                         {
                             "type": "tool_result",
                             "tool_use_id": tool_use_id,
-                            "content": f"Error: {str(e)}",
-                            "is_error": True,
+                            "content": f"Error: {e!s}",
+                            "is_error": "true",
                         }
                     )
             elif block.type == "text":
@@ -269,10 +265,10 @@ class ClaudePlaywrightAgent:
                 text_parts.append(block.text)
         return "\n".join(text_parts)
 
-    def _extract_mcp_result_text(self, mcp_result) -> str:
+    def _extract_mcp_result_text(self, mcp_result: Any) -> str:
         """Extract text from MCP tool result."""
         if hasattr(mcp_result, "content") and mcp_result.content:
             first_content = mcp_result.content[0]
             if hasattr(first_content, "text"):
-                return first_content.text
+                return str(first_content.text)
         return str(mcp_result)

@@ -8,8 +8,17 @@ services:
       - '8000:8000'
     volumes:
       - ./logs:/app/logs
+      - ./browser_profile:/app/browser_profile
+      - ./lib:/app/lib
+      - ./main.py:/app/main.py
+      - ./claude_agent.py:/app/claude_agent.py
+      - ./mcp_client.py:/app/mcp_client.py
+      - ./models.py:/app/models.py
+      - ./stealth.js:/app/stealth.js
     environment:
       - PYTHONUNBUFFERED=1
       - DEV_MODE=${DEV_MODE}
+      - API_KEY=${API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     restart: unless-stopped
+    command: sh -c "Xvfb :99 -screen 0 1280x720x24 & export DISPLAY=:99 && uvicorn main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app --reload-delay 1 --use-colors"

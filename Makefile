@@ -1,17 +1,17 @@
-.PHONY: help install install-dev lint format type-check test test-integration test-all docker-build docker-up docker-down clean
+.PHONY: help install install-dev dev lint format type-check test test-integration test-all docker-up docker-down clean
 
 help:
 	@echo "Available commands:"
 	@echo "  make install           - Install production dependencies"
 	@echo "  make install-dev       - Install development dependencies"
+	@echo "  make dev               - Run development server with auto-reload"
 	@echo "  make lint              - Run ruff linter"
 	@echo "  make format            - Format code with ruff and black"
 	@echo "  make type-check        - Run mypy type checker"
 	@echo "  make test              - Run unit tests"
 	@echo "  make test-integration  - Run integration test (~2 minutes)"
 	@echo "  make test-all          - Run all tests"
-	@echo "  make docker-build      - Build Docker image"
-	@echo "  make docker-up         - Start Docker services"
+	@echo "  make docker-up         - Build and start Docker services (idempotent)"
 	@echo "  make docker-down       - Stop Docker services"
 	@echo "  make clean             - Remove build artifacts"
 
@@ -21,6 +21,9 @@ install:
 install-dev:
 	pip install -r requirements-dev.txt
 	pre-commit install
+
+dev:
+	uvicorn main:app --reload --reload-exclude '.history/*'
 
 lint:
 	ruff check .
@@ -41,11 +44,11 @@ test-integration:
 
 test-all: test test-integration
 
-docker-build:
-	docker compose build
-
 docker-up:
-	docker compose up -d
+	docker compose up --build
+
+docker-up-d:
+	docker compose up -d --build
 
 docker-down:
 	docker compose down

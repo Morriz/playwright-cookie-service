@@ -3,6 +3,9 @@ FROM mcr.microsoft.com/playwright/python:v1.50.0-noble AS builder
 
 WORKDIR /app
 
+# Install make
+RUN apt-get update && apt-get install -y make && rm -rf /var/lib/apt/lists/*
+
 # Copy requirements and install all dependencies (including dev)
 COPY requirements.txt requirements-dev.txt ./
 RUN pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt
@@ -25,7 +28,7 @@ WORKDIR /app
 # Install Node.js and Xvfb (virtual framebuffer for headed mode)
 RUN apt-get update && apt-get install -y nodejs npm xvfb && rm -rf /var/lib/apt/lists/*
 
-# Install Playwright MCP server globally
+# Install Playwright MCP server globally to cache it
 RUN npm install -g @playwright/mcp@latest
 
 # Copy requirements and install production dependencies only

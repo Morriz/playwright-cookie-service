@@ -8,14 +8,18 @@ Integration test that verifies the full webhook flow:
 """
 
 import asyncio
+import os
 import signal
 import subprocess
 import sys
 import time
 
 import httpx
+from dotenv import load_dotenv
 
-from logger import setup_logger
+from lib.logger import setup_logger
+
+load_dotenv()
 
 logger = setup_logger(__name__)
 
@@ -48,7 +52,7 @@ async def run_integration_test():
         # 1. Start webhook receiver
         logger.info("🚀 Starting webhook receiver...")
         webhook_process = subprocess.Popen(
-            [sys.executable, "test_webhook_receiver.py"],
+            [sys.executable, "webhook_receiver.py"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
@@ -68,21 +72,32 @@ async def run_integration_test():
         if not await wait_for_service("http://localhost:8000/health"):
             raise Exception("Docker service failed to start")
 
-        # 3. Run test script
-        logger.info("🧪 Running test script...")
-        test_process = subprocess.run(
-            [sys.executable, "test_playwright_service.py"],
-            capture_output=True,
-            text=True,
-        )
-
-        logger.info(f"Test output:\n{test_process.stdout}")
-        if test_process.stderr:
-            logger.error(f"Test errors:\n{test_process.stderr}")
+        # 3. Send test request
+        logger.info("🧪 Sending test request to service...")
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                "http://localhost:8000/get-cookies",
+                headers={"X-API-KEY": os.getenv("API_KEY")},
+                json={
+                    "login_url": "https://x.com/login",
+                    "svc_username": os.getenv("SVC_USERNAME"),
+                    "svc_email": os.getenv("SVC_EMAIL"),
+                    "svc_password": os.getenv("SVC_PASSWORD"),
+                    "email_password": os.getenv("EMAIL_PASSWORD"),
+                    "callback_url": "http://host.docker.internal:9000/webhook",
+                },
+            )
+            if response.status_code != 200:
+                logger.error(f"❌ Request failed with status {response.status_code}")
+                logger.error(f"Response body: {response.text}")
+                raise Exception(
+                    f"Request failed: {response.status_code} - {response.text}"
+                )
+            logger.info(f"Request submitted: {response.json()}")
 
         # 4. Wait for authentication to complete and check logs
-        logger.info("⏳ Waiting for authentication to complete (60-120s)...")
-        await asyncio.sleep(90)
+        logger.info("⏳ Waiting for authentication to complete (180s)...")
+        await asyncio.sleep(180)
 
         # Check webhook receiver logs
         logger.info("📊 Checking webhook receiver logs...")
@@ -91,9 +106,8 @@ async def run_integration_test():
                 "✅ Integration test likely succeeded (check webhook receiver output above)"
             )
             return 0
-        else:
-            logger.error("❌ Webhook receiver stopped unexpectedly")
-            return 1
+        logger.error("❌ Webhook receiver stopped unexpectedly")
+        return 1
 
     except Exception as e:
         logger.exception(f"❌ Integration test error: {e}")

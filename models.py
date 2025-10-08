@@ -2,12 +2,12 @@ from pydantic import BaseModel, EmailStr, HttpUrl
 
 
 class CookieRequest(BaseModel):
-    x_username: str
-    x_email: EmailStr
-    x_password: str
-    protonmail_email: EmailStr
-    protonmail_password: str
-    webhook_url: HttpUrl
+    login_url: HttpUrl
+    svc_username: str | None = None
+    svc_email: EmailStr
+    svc_password: str | None = None
+    email_password: str
+    callback_url: HttpUrl
 
 
 class CookieResponse(BaseModel):

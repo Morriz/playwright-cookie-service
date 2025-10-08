@@ -1,5 +1,7 @@
 # Python
 __pycache__/
+.ruff_cache/
+.mypy_cache/
 *.py[cod]
 *$py.class
 *.so
@@ -45,3 +47,7 @@ docker-compose.override.yml
 
 # macOS
 .DS_Store
+
+browser_profile
+
+uv.lock

@@ -25,7 +25,6 @@ def test_webhook_success(client):
 
     response = client.post("/webhook", json=payload)
     assert response.status_code == 200
-    assert response.json() == {"status": "received"}
 
 
 def test_webhook_failure(client):
@@ -40,7 +39,6 @@ def test_webhook_failure(client):
 
     response = client.post("/webhook", json=payload)
     assert response.status_code == 200
-    assert response.json() == {"status": "received"}
 
 
 def test_webhook_payload_accepts_none_values():

@@ -15,9 +15,10 @@
         "0.0.0.0",
         "--port",
         "8000",
-        "--reload"
+        "--reload",
+        "--reload-exclude",
+        ".history/*"
       ],
-      "cwd": "${workspaceFolder}/playwright-service",
       "jinja": true,
       "justMyCode": false,
       "module": "uvicorn",
