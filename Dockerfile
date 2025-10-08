@@ -28,7 +28,7 @@ WORKDIR /app
 # Install Node.js and Xvfb (virtual framebuffer for headed mode)
 RUN apt-get update && apt-get install -y nodejs npm xvfb && rm -rf /var/lib/apt/lists/*
 
-# Install Playwright MCP server globally to cache it
+# Install Playwright MCP server globally
 RUN npm install -g @playwright/mcp@latest
 
 # Copy requirements and install production dependencies only
@@ -40,7 +40,7 @@ COPY --from=builder /app/lib/ lib/
 COPY --from=builder /app/main.py /app/models.py /app/claude_agent.py /app/mcp_client.py /app/stealth.js ./
 
 # Expose port
-EXPOSE 8000
+EXPOSE 8080
 
 # Run the service with Xvfb (virtual display for headed mode)
-CMD ["sh", "-c", "Xvfb :99 -screen 0 1280x720x24 & export DISPLAY=:99 && uvicorn main:app --host 0.0.0.0 --port 8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]

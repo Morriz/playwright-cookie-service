@@ -20,6 +20,7 @@ class MCPPlaywrightClient:
         stealth_script = os.path.join(os.path.dirname(__file__), "stealth.js")
 
         args = [
+            "--offline",  # Use cached package only, no network calls
             "--yes",  # Skip install prompt
             "@playwright/mcp@latest",
             "--browser=firefox",  # Firefox works on ARM64, Chromium doesn't

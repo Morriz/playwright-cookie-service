@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 .PHONY: help install install-dev dev lint format type-check test test-integration test-all docker-up docker-down clean
 
 help:
@@ -16,31 +18,31 @@ help:
 	@echo "  make clean             - Remove build artifacts"
 
 install:
-	pip install -r requirements.txt
+	.venv/bin/pip install -r requirements.txt
 
 install-dev:
-	pip install -r requirements-dev.txt
-	pre-commit install
+	.venv/bin/pip install -r requirements-dev.txt
+	.venv/bin/pre-commit install
 
 dev:
-	uvicorn main:app --reload --reload-exclude '.history/*'
+	.venv/bin/uvicorn main:app --reload --reload-exclude '.history/*'
 
 lint:
-	ruff check .
+	.venv/bin/ruff check .
 
 format:
-	ruff check --fix .
-	ruff format .
-	black .
+	.venv/bin/ruff check --fix .
+	.venv/bin/ruff format .
+	.venv/bin/black .
 
 type-check:
-	mypy . --ignore-missing-imports
+	.venv/bin/mypy . --ignore-missing-imports
 
 test:
-	pytest test_webhook_unit.py -v
+	.venv/bin/pytest test_webhook_unit.py test_services.py -v
 
 test-integration:
-	python test_integration.py
+	.venv/bin/python test_integration.py
 
 test-all: test test-integration
 
