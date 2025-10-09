@@ -4,11 +4,13 @@ FROM mcr.microsoft.com/playwright/python:v1.50.0-noble AS builder
 WORKDIR /app
 
 # Install make
-RUN apt-get update && apt-get install -y make && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y make python3.12 python3.12-venv && rm -rf /var/lib/apt/lists/*
+RUN python -m venv .venv
+ENV NEEDRESTART_MODE=l
 
 # Copy requirements and install all dependencies (including dev)
 COPY requirements.txt requirements-dev.txt ./
-RUN pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt
+RUN .venv/bin/pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt
 
 # Copy Makefile
 COPY Makefile .
