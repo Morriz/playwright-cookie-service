@@ -10,9 +10,7 @@ from lib.auth import verify_apikey
 from lib.logger import setup_logger
 from mcp_client import MCPPlaywrightClient
 from models import CookieRequest, CookieResponse, TaskStatusResponse, WebhookPayload
-from services.browser_service import cleanup_login_traces, setup_browser_profile
-from services.cookie_extractor import extract_cookies_from_trace
-from services.task_builder import build_login_task
+from services import browser_service, cookie_extractor, task_builder
 
 # Load environment variables from .env file
 load_dotenv()
@@ -48,8 +46,8 @@ async def process_cookie_request(
         logger.info("Initializing Claude agent and MCP client")
         agent = ClaudePlaywrightAgent(api_key=anthropic_api_key)
 
-        user_data_dir = setup_browser_profile()
-        cleanup_login_traces(user_data_dir, request.login_url, request_id)
+        user_data_dir = browser_service.setup_browser_profile()
+        browser_service.cleanup_login_traces(user_data_dir, str(request.login_url), request_id)
 
         mcp_client = MCPPlaywrightClient(user_data_dir=user_data_dir)
 
@@ -57,7 +55,7 @@ async def process_cookie_request(
             f"Connecting to Playwright MCP server with user data dir: {user_data_dir}"
         )
         async with mcp_client.connect() as session:
-            task = build_login_task(request)
+            task = task_builder.build_login_task(request)
             logger.info("Starting Claude agent task execution")
             result = await agent.execute_task(task=task, mcp_session=session)
 
@@ -68,8 +66,8 @@ async def process_cookie_request(
             logger.error(f"[{request_id}] {e}")
             raise Exception(e)
 
-        cookie_string = extract_cookies_from_trace(
-            user_data_dir, request.login_url, request_id
+        cookie_string = cookie_extractor.extract_cookies_from_trace(
+            user_data_dir, str(request.login_url), request_id
         )
 
         response = CookieResponse(

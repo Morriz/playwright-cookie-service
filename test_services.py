@@ -6,8 +6,10 @@ import tempfile
 
 import pytest
 
-from services.browser_service import cleanup_login_traces
-from services.cookie_extractor import extract_cookies_from_trace
+from services import browser_service, cookie_extractor
+
+cleanup_login_traces = browser_service.cleanup_login_traces
+extract_cookies_from_trace = cookie_extractor.extract_cookies_from_trace
 
 
 class TestBrowserService:

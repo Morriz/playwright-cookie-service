@@ -17,6 +17,7 @@ COPY Makefile .
 
 # Copy source code
 COPY lib/ lib/
+COPY services/ services/
 COPY main.py models.py claude_agent.py mcp_client.py stealth.js ./
 
 # Run lint and type checks
@@ -39,6 +40,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy validated code from builder stage
 COPY --from=builder /app/lib/ lib/
+COPY --from=builder /app/services/ services/
 COPY --from=builder /app/main.py /app/models.py /app/claude_agent.py /app/mcp_client.py /app/stealth.js ./
 
 # Expose port

@@ -6,7 +6,7 @@ from lib.logger import setup_logger
 logger = setup_logger(__name__)
 
 
-def setup_browser_profile(base_dir: str = None) -> str:
+def setup_browser_profile(base_dir: str | None = None) -> str:
     """
     Set up persistent browser profile directory.
 
